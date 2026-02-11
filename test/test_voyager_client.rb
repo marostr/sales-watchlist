@@ -145,3 +145,128 @@ class TestVoyagerClientFetchPosts < Minitest::Test
     "https://www.linkedin.com/voyager/api/graphql?includeWebMetadata=true&variables=(count:#{count},start:#{start},profileUrn:#{encoded_urn})&queryId=#{query_id}"
   end
 end
+
+class TestVoyagerClientFetchComments < Minitest::Test
+  PROFILE_URN = "ACoAAAvvCuEBFoKo-y6KGmtJ_tVzmV_Bv4YWvwE"
+
+  def setup
+    @client = VoyagerClient.new("ajax:123456", "fake_li_at_token")
+  end
+
+  def test_fetch_comments_returns_parsed_comments
+    response_body = {
+      "included" => [
+        {
+          "$type" => "com.linkedin.voyager.dash.social.Comment",
+          "commentary" => { "text" => "Great post, totally agree!" },
+          "permalink" => "https://www.linkedin.com/feed/update/urn:li:ugcPost:999?commentUrn=urn%3Ali%3Acomment%3A111",
+          "createdAt" => 1728289811166,
+          "commenter" => {
+            "title" => { "text" => "Dorota Piekarska" },
+            "commenterProfileId" => "ACoAAAvvCuEBFoKo"
+          }
+        },
+        {
+          "$type" => "com.linkedin.voyager.dash.feed.Update",
+          "updateMetadata" => { "urn" => "urn:li:activity:999" },
+          "commentary" => { "text" => { "text" => "Original post content here" } },
+          "header" => { "text" => { "text" => "Dorota Piekarska commented on this" } },
+          "*highlightedComments" => ["urn:li:fsd_comment:(111,urn:li:ugcPost:999)"]
+        }
+      ]
+    }.to_json
+
+    stub_graphql_comments(PROFILE_URN, response_body)
+
+    comments = @client.fetch_comments(PROFILE_URN)
+    assert_equal 1, comments.length
+
+    comment = comments[0]
+    assert_equal "Great post, totally agree!", comment[:comment_text]
+    assert_equal "Original post content here", comment[:post_content]
+    assert_equal "Dorota Piekarska commented on this", comment[:header]
+    assert_equal 1728289811166, comment[:commented_at]
+    assert_includes comment[:url], "commentUrn"
+  end
+
+  def test_fetch_comments_handles_multiple_comments
+    response_body = {
+      "included" => [
+        {
+          "$type" => "com.linkedin.voyager.dash.social.Comment",
+          "commentary" => { "text" => "First comment" },
+          "permalink" => "https://linkedin.com/comment/1",
+          "createdAt" => 1000,
+          "commenter" => { "title" => { "text" => "User A" } }
+        },
+        {
+          "$type" => "com.linkedin.voyager.dash.social.Comment",
+          "commentary" => { "text" => "Second comment" },
+          "permalink" => "https://linkedin.com/comment/2",
+          "createdAt" => 2000,
+          "commenter" => { "title" => { "text" => "User B" } }
+        },
+        {
+          "$type" => "com.linkedin.voyager.dash.feed.Update",
+          "updateMetadata" => { "urn" => "urn:li:activity:100" },
+          "commentary" => { "text" => { "text" => "Post A" } },
+          "header" => { "text" => { "text" => "X commented on this" } }
+        },
+        {
+          "$type" => "com.linkedin.voyager.dash.feed.Update",
+          "updateMetadata" => { "urn" => "urn:li:activity:200" },
+          "commentary" => { "text" => { "text" => "Post B" } },
+          "header" => { "text" => { "text" => "Y commented on this" } }
+        }
+      ]
+    }.to_json
+
+    stub_graphql_comments(PROFILE_URN, response_body)
+
+    comments = @client.fetch_comments(PROFILE_URN)
+    assert_equal 2, comments.length
+    assert_equal "First comment", comments[0][:comment_text]
+    assert_equal "Second comment", comments[1][:comment_text]
+  end
+
+  def test_fetch_comments_returns_empty_when_no_comments
+    stub_graphql_comments(PROFILE_URN, { "included" => [] }.to_json)
+
+    comments = @client.fetch_comments(PROFILE_URN)
+    assert_equal [], comments
+  end
+
+  def test_fetch_comments_pairs_with_updates_by_position
+    response_body = {
+      "included" => [
+        {
+          "$type" => "com.linkedin.voyager.dash.social.Comment",
+          "commentary" => { "text" => "My comment" },
+          "permalink" => "https://linkedin.com/comment/1",
+          "createdAt" => 1000,
+          "commenter" => { "title" => { "text" => "Me" } }
+        },
+        {
+          "$type" => "com.linkedin.voyager.dash.feed.Update",
+          "commentary" => { "text" => { "text" => "The post I commented on" } },
+          "header" => { "text" => { "text" => "Me commented on this" } },
+          "updateMetadata" => { "urn" => "urn:li:activity:42" }
+        }
+      ]
+    }.to_json
+
+    stub_graphql_comments(PROFILE_URN, response_body)
+
+    comments = @client.fetch_comments(PROFILE_URN)
+    assert_equal "The post I commented on", comments[0][:post_content]
+    assert_equal "https://www.linkedin.com/feed/update/urn:li:activity:42", comments[0][:post_url]
+  end
+
+  private
+
+  def stub_graphql_comments(urn, body)
+    encoded_urn = "urn%3Ali%3Afsd_profile%3A#{urn}"
+    url = "https://www.linkedin.com/voyager/api/graphql?includeWebMetadata=true&variables=(count:20,start:0,profileUrn:#{encoded_urn})&queryId=#{VoyagerClient::COMMENTS_QUERY_ID}"
+    stub_request(:get, url).to_return(status: 200, body: body)
+  end
+end

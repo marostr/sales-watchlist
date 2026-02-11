@@ -5,8 +5,10 @@ require "uri"
 class VoyagerClient
   BASE_URL = "https://www.linkedin.com/voyager/api"
   POSTS_QUERY_ID = "voyagerFeedDashProfileUpdates.4af00b28d60ed0f1488018948daad822"
+  COMMENTS_QUERY_ID = "voyagerFeedDashProfileUpdates.8f05a4e5ad12d9cb2b56eaa22afbcab9"
 
   UPDATE_TYPE = "com.linkedin.voyager.dash.feed.Update"
+  COMMENT_TYPE = "com.linkedin.voyager.dash.social.Comment"
 
   class ApiError < StandardError; end
   class ProfileNotFound < ApiError; end
@@ -32,6 +34,19 @@ class VoyagerClient
     updates.filter_map { |update| parse_post(update) }
   end
 
+  def fetch_comments(profile_urn, count: 20, start: 0)
+    data = graphql_feed(profile_urn, COMMENTS_QUERY_ID, count: count, start: start)
+    included = data.fetch("included", [])
+
+    comments = included.select { |item| item["$type"] == COMMENT_TYPE }
+    updates = included.select { |item| item["$type"] == UPDATE_TYPE }
+
+    comments.each_with_index.filter_map do |comment, i|
+      update = updates[i]
+      parse_comment(comment, update)
+    end
+  end
+
   private
 
   def parse_post(update)
@@ -42,6 +57,25 @@ class VoyagerClient
     url = "https://www.linkedin.com/feed/update/#{urn}" if urn
 
     { url: url, content: content }
+  end
+
+  def parse_comment(comment, update)
+    comment_text = comment.dig("commentary", "text")
+    return nil unless comment_text
+
+    post_content = update&.dig("commentary", "text", "text")
+    header = update&.dig("header", "text", "text")
+    post_urn = update&.dig("updateMetadata", "urn")
+    post_url = "https://www.linkedin.com/feed/update/#{post_urn}" if post_urn
+
+    {
+      url: comment["permalink"],
+      comment_text: comment_text,
+      post_url: post_url,
+      post_content: post_content,
+      header: header,
+      commented_at: comment["createdAt"]
+    }
   end
 
   def graphql_feed(profile_urn, query_id, count:, start:)
