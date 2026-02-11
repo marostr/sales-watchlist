@@ -4,6 +4,9 @@ require "uri"
 
 class VoyagerClient
   BASE_URL = "https://www.linkedin.com/voyager/api"
+  POSTS_QUERY_ID = "voyagerFeedDashProfileUpdates.4af00b28d60ed0f1488018948daad822"
+
+  UPDATE_TYPE = "com.linkedin.voyager.dash.feed.Update"
 
   class ApiError < StandardError; end
   class ProfileNotFound < ApiError; end
@@ -22,7 +25,32 @@ class VoyagerClient
     profile["entityUrn"].split(":").last
   end
 
+  def fetch_posts(profile_urn, count: 20, start: 0)
+    data = graphql_feed(profile_urn, POSTS_QUERY_ID, count: count, start: start)
+    updates = data.fetch("included", []).select { |item| item["$type"] == UPDATE_TYPE }
+
+    updates.filter_map { |update| parse_post(update) }
+  end
+
   private
+
+  def parse_post(update)
+    content = update.dig("commentary", "text", "text")
+    return nil unless content
+
+    urn = update.dig("updateMetadata", "urn")
+    url = "https://www.linkedin.com/feed/update/#{urn}" if urn
+
+    { url: url, content: content }
+  end
+
+  def graphql_feed(profile_urn, query_id, count:, start:)
+    encoded_urn = URI.encode_www_form_component("urn:li:fsd_profile:#{profile_urn}")
+    path = "/graphql?includeWebMetadata=true" \
+           "&variables=(count:#{count},start:#{start},profileUrn:#{encoded_urn})" \
+           "&queryId=#{query_id}"
+    get(path)
+  end
 
   def get(path, params = {})
     uri = URI("#{BASE_URL}#{path}")
