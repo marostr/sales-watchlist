@@ -54,9 +54,9 @@ per bullet. Skip people with no activity.
 Example:
 
 **Dorota Piekarska**
-- Organizuje EB Club event w Krakowie 19.03 ([link])
-- Prowadzi kurs "Cykl życia pracownika" na SWPS ([link])
-- Komentuje tematy: różnorodność międzypokoleniowa, networking, wellbeing
+- Hosting EB Club event in Kraków on 19.03 ([link])
+- Teaching "Employee lifecycle" course at SWPS University ([link])
+- Commenting on: generational diversity, networking, wellbeing
 
 Do NOT add subsections, personality profiles, or "kontekst ludzki" blocks.
 Stick to what they did, not who they are.
