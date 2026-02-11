@@ -47,20 +47,27 @@ Sort by urgency — signals you should act on today first.
 
 ### 2. Activity Digest
 
-Group by person. For each person on the watchlist who had activity:
+Group by person. For each person who had activity, write **2–4 bullet
+points** covering what they posted and where they commented. One sentence
+per bullet. Skip people with no activity.
 
-**[Person Name]**
-- Posts: summarize what they wrote about (topics, tone, key points)
-- Comments: summarize where they engaged and what they said
-- Pattern: if you notice recurring themes or interests, note them
+Example:
 
-Skip people with no activity in this batch.
+**Dorota Piekarska**
+- Organizuje EB Club event w Krakowie 19.03 ([link])
+- Prowadzi kurs "Cykl życia pracownika" na SWPS ([link])
+- Komentuje tematy: różnorodność międzypokoleniowa, networking, wellbeing
+
+Do NOT add subsections, personality profiles, or "kontekst ludzki" blocks.
+Stick to what they did, not who they are.
 
 ## Rules
 
-- Be concise. One sentence per item unless more context is critical.
-- Use the sales context above to determine what's relevant. Not all activity
-  is a signal — only flag what connects to your sales goals.
+- **Brevity is mandatory.** One sentence per bullet. No preambles, no
+  summaries, no "podsumowanie" section at the end.
+- The entire briefing should be under 80 lines.
+- Use the sales context to determine relevance. Not all activity is a
+  signal — only flag what connects to your sales goals.
 - If there are no hot signals, say so. Don't manufacture urgency.
-- Include direct LinkedIn URLs for every item so the user can click through.
+- Include direct LinkedIn URLs for every item.
 - Write in the language of the sales context (if Polish, write in Polish).
