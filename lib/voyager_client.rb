@@ -53,8 +53,7 @@ class VoyagerClient
     content = update.dig("commentary", "text", "text")
     return nil unless content
 
-    urn = update.dig("updateMetadata", "urn")
-    url = "https://www.linkedin.com/feed/update/#{urn}" if urn
+    url = post_url_from(update)
 
     { url: url, content: content }
   end
@@ -65,8 +64,7 @@ class VoyagerClient
 
     post_content = update&.dig("commentary", "text", "text")
     header = update&.dig("header", "text", "text")
-    post_urn = update&.dig("updateMetadata", "urn")
-    post_url = "https://www.linkedin.com/feed/update/#{post_urn}" if post_urn
+    post_url = post_url_from(update) if update
 
     {
       url: comment["permalink"],
@@ -76,6 +74,14 @@ class VoyagerClient
       header: header,
       commented_at: comment["createdAt"]
     }
+  end
+
+  def post_url_from(update)
+    entity_urn = update["entityUrn"] || ""
+    activity_match = entity_urn.match(/urn:li:activity:\d+/)
+    return nil unless activity_match
+
+    "https://www.linkedin.com/feed/update/#{activity_match[0]}"
   end
 
   def graphql_feed(profile_urn, query_id, count:, start:)

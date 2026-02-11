@@ -80,7 +80,7 @@ class TestVoyagerClientFetchPosts < Minitest::Test
       "included" => [
         {
           "$type" => "com.linkedin.voyager.dash.feed.Update",
-          "updateMetadata" => { "urn" => "urn:li:activity:123" },
+          "entityUrn" => "urn:li:fsd_update:(urn:li:activity:123,MEMBER_SHARES,EMPTY,DEFAULT,false)",
           "commentary" => { "text" => { "text" => "Hello world, this is my post" } },
           "header" => nil
         },
@@ -104,7 +104,7 @@ class TestVoyagerClientFetchPosts < Minitest::Test
       "included" => [
         {
           "$type" => "com.linkedin.voyager.dash.feed.Update",
-          "updateMetadata" => { "urn" => "urn:li:activity:123" },
+          "entityUrn" => "urn:li:fsd_update:(urn:li:activity:123,MEMBER_SHARES,EMPTY,DEFAULT,false)",
           "commentary" => nil,
           "header" => nil
         }
@@ -168,7 +168,7 @@ class TestVoyagerClientFetchComments < Minitest::Test
         },
         {
           "$type" => "com.linkedin.voyager.dash.feed.Update",
-          "updateMetadata" => { "urn" => "urn:li:activity:999" },
+          "entityUrn" => "urn:li:fsd_update:(urn:li:activity:999,MEMBER_SHARES,EMPTY,DEFAULT,false)",
           "commentary" => { "text" => { "text" => "Original post content here" } },
           "header" => { "text" => { "text" => "Dorota Piekarska commented on this" } },
           "*highlightedComments" => ["urn:li:fsd_comment:(111,urn:li:ugcPost:999)"]
@@ -208,13 +208,13 @@ class TestVoyagerClientFetchComments < Minitest::Test
         },
         {
           "$type" => "com.linkedin.voyager.dash.feed.Update",
-          "updateMetadata" => { "urn" => "urn:li:activity:100" },
+          "entityUrn" => "urn:li:fsd_update:(urn:li:activity:100,MEMBER_SHARES,EMPTY,DEFAULT,false)",
           "commentary" => { "text" => { "text" => "Post A" } },
           "header" => { "text" => { "text" => "X commented on this" } }
         },
         {
           "$type" => "com.linkedin.voyager.dash.feed.Update",
-          "updateMetadata" => { "urn" => "urn:li:activity:200" },
+          "entityUrn" => "urn:li:fsd_update:(urn:li:activity:200,MEMBER_SHARES,EMPTY,DEFAULT,false)",
           "commentary" => { "text" => { "text" => "Post B" } },
           "header" => { "text" => { "text" => "Y commented on this" } }
         }
@@ -250,7 +250,7 @@ class TestVoyagerClientFetchComments < Minitest::Test
           "$type" => "com.linkedin.voyager.dash.feed.Update",
           "commentary" => { "text" => { "text" => "The post I commented on" } },
           "header" => { "text" => { "text" => "Me commented on this" } },
-          "updateMetadata" => { "urn" => "urn:li:activity:42" }
+          "entityUrn" => "urn:li:fsd_update:(urn:li:activity:42,MEMBER_SHARES,EMPTY,DEFAULT,false)"
         }
       ]
     }.to_json
