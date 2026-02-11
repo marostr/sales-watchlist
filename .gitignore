@@ -1,0 +1,6 @@
+*.db
+.bundle/
+vendor/
+watchlist.json
+sales_context.md
+.env
