@@ -19,6 +19,20 @@ class TestWatchlistFetcherLoadWatchlist < Minitest::Test
     end
   end
 
+  def test_save_watchlist_writes_json
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "watchlist.json")
+      watchlist = [
+        { "name" => "Alice", "linkedin_id" => "alice", "profile_urn" => "URN_ALICE" }
+      ]
+
+      WatchlistFetcher.save_watchlist(path, watchlist)
+
+      saved = JSON.parse(File.read(path))
+      assert_equal "URN_ALICE", saved[0]["profile_urn"]
+    end
+  end
+
   def test_raises_on_missing_file
     assert_raises(Errno::ENOENT) do
       WatchlistFetcher.load_watchlist("/nonexistent/watchlist.json")
@@ -96,6 +110,28 @@ class TestWatchlistFetcherFetchAll < Minitest::Test
     stderr = output[1]
     assert_match(/bob.*not found/i, stderr)
     assert_equal 1, @store.unprocessed_posts.length
+  end
+
+  def test_skips_resolve_when_profile_urn_present
+    @client.posts["URN_ALICE"] = [{ url: "https://linkedin.com/post/1", content: "A", author_name: "Alice", author_profile: "alice" }]
+    @client.comments["URN_ALICE"] = []
+    # Note: NOT adding alice to @client.profiles — resolve_profile would raise ProfileNotFound
+
+    watchlist = [{ "name" => "Alice", "linkedin_id" => "alice", "profile_urn" => "URN_ALICE" }]
+    stats = @fetcher.fetch_all(watchlist)
+
+    assert_equal 1, stats[:posts_fetched]
+  end
+
+  def test_resolves_and_sets_profile_urn_when_missing
+    @client.profiles["alice"] = "URN_ALICE"
+    @client.posts["URN_ALICE"] = [{ url: "https://linkedin.com/post/1", content: "A", author_name: "Alice", author_profile: "alice" }]
+    @client.comments["URN_ALICE"] = []
+
+    watchlist = [{ "name" => "Alice", "linkedin_id" => "alice" }]
+    @fetcher.fetch_all(watchlist)
+
+    assert_equal "URN_ALICE", watchlist[0]["profile_urn"]
   end
 
   def test_logs_fetch_to_store

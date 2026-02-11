@@ -44,6 +44,16 @@ class TestCliFetch < Minitest::Test
     assert_match(/Posts fetched/, out)
     assert_match(/1/, out)
   end
+
+  def test_fetch_saves_resolved_urns_to_watchlist
+    capture_io do
+      CLI.run(["fetch", "--watchlist", @watchlist_path],
+        jsessionid: "ajax:123", li_at: "token", db_path: @db_path)
+    end
+
+    saved = JSON.parse(File.read(@watchlist_path))
+    assert_equal "URN_ALICE", saved[0]["profile_urn"]
+  end
 end
 
 class TestCliBriefing < Minitest::Test

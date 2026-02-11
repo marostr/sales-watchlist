@@ -7,6 +7,10 @@ class WatchlistFetcher
     JSON.parse(File.read(path))
   end
 
+  def self.save_watchlist(path, watchlist)
+    File.write(path, JSON.pretty_generate(watchlist))
+  end
+
   def initialize(client, store, delay: nil)
     @client = client
     @store = store
@@ -22,11 +26,15 @@ class WatchlistFetcher
 
       $stderr.print "Fetching #{name} (#{linkedin_id})... "
 
-      begin
-        urn = @client.resolve_profile(linkedin_id)
-      rescue VoyagerClient::ProfileNotFound
-        $stderr.puts "not found, skipping"
-        next
+      urn = person["profile_urn"]
+      unless urn
+        begin
+          urn = @client.resolve_profile(linkedin_id)
+          person["profile_urn"] = urn
+        rescue VoyagerClient::ProfileNotFound
+          $stderr.puts "not found, skipping"
+          next
+        end
       end
 
       sleep(random_delay) if i > 0

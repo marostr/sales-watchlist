@@ -46,6 +46,7 @@ class CLI
     watchlist = WatchlistFetcher.load_watchlist(watchlist_path)
 
     stats = fetcher.fetch_all(watchlist)
+    WatchlistFetcher.save_watchlist(watchlist_path, watchlist)
 
     puts "Posts fetched:      #{stats[:posts_fetched]}"
     puts "Comments fetched:   #{stats[:comments_fetched]}"
