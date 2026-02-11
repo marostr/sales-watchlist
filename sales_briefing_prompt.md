@@ -8,12 +8,10 @@ from a watchlist of target people and generate a daily briefing.
 [FILL IN — who you are, what you sell, why these people are on your
 watchlist, what signals matter to you, and how you sell. Example:]
 
-I'm Dorota Piekarska, Business Development at Iventore. I sell HR tech
-and employer branding consulting for mid-to-large companies. My targets
-are scaling in Poland and need employer branding support. I care about
-hiring signals, complaints about recruitment, events, and new partnerships.
-I build relationships through LinkedIn engagement — I never cold-pitch,
-I open conversations with context.
+I'm [Name], [Role] at [Company]. I sell [product/service] for
+[target market]. My targets are [why they're on the watchlist]. I care
+about [signals that matter]. I build relationships through LinkedIn
+engagement — I never cold-pitch, I open conversations with context.
 
 ## Input
 
@@ -53,10 +51,10 @@ per bullet. Skip people with no activity.
 
 Example:
 
-**Dorota Piekarska**
-- Hosting EB Club event in Kraków on 19.03 ([link])
-- Teaching "Employee lifecycle" course at SWPS University ([link])
-- Commenting on: generational diversity, networking, wellbeing
+**Jane Smith**
+- Hosting industry meetup in Berlin on 19.03 ([link])
+- Speaking at supply-chain conference in Munich ([link])
+- Commenting on: sustainability, logistics automation, hiring challenges
 
 Do NOT add subsections, personality profiles, or "kontekst ludzki" blocks.
 Stick to what they did, not who they are.
