@@ -183,6 +183,7 @@ class TestVoyagerClientFetchComments < Minitest::Test
       "included" => [
         {
           "$type" => "com.linkedin.voyager.dash.social.Comment",
+          "entityUrn" => "urn:li:fsd_comment:(111,urn:li:ugcPost:999)",
           "commentary" => { "text" => "Great post, totally agree!" },
           "permalink" => "https://www.linkedin.com/feed/update/urn:li:ugcPost:999?commentUrn=urn%3Ali%3Acomment%3A111",
           "createdAt" => 1728289811166,
@@ -219,6 +220,7 @@ class TestVoyagerClientFetchComments < Minitest::Test
       "included" => [
         {
           "$type" => "com.linkedin.voyager.dash.social.Comment",
+          "entityUrn" => "urn:li:fsd_comment:(111,urn:li:activity:100)",
           "commentary" => { "text" => "First comment" },
           "permalink" => "https://linkedin.com/comment/1",
           "createdAt" => 1000,
@@ -226,6 +228,7 @@ class TestVoyagerClientFetchComments < Minitest::Test
         },
         {
           "$type" => "com.linkedin.voyager.dash.social.Comment",
+          "entityUrn" => "urn:li:fsd_comment:(222,urn:li:activity:200)",
           "commentary" => { "text" => "Second comment" },
           "permalink" => "https://linkedin.com/comment/2",
           "createdAt" => 2000,
@@ -235,13 +238,15 @@ class TestVoyagerClientFetchComments < Minitest::Test
           "$type" => "com.linkedin.voyager.dash.feed.Update",
           "entityUrn" => "urn:li:fsd_update:(urn:li:activity:100,MEMBER_SHARES,EMPTY,DEFAULT,false)",
           "commentary" => { "text" => { "text" => "Post A" } },
-          "header" => { "text" => { "text" => "X commented on this" } }
+          "header" => { "text" => { "text" => "X commented on this" } },
+          "*highlightedComments" => ["urn:li:fsd_comment:(111,urn:li:activity:100)"]
         },
         {
           "$type" => "com.linkedin.voyager.dash.feed.Update",
           "entityUrn" => "urn:li:fsd_update:(urn:li:activity:200,MEMBER_SHARES,EMPTY,DEFAULT,false)",
           "commentary" => { "text" => { "text" => "Post B" } },
-          "header" => { "text" => { "text" => "Y commented on this" } }
+          "header" => { "text" => { "text" => "Y commented on this" } },
+          "*highlightedComments" => ["urn:li:fsd_comment:(222,urn:li:activity:200)"]
         }
       ]
     }.to_json
@@ -261,21 +266,38 @@ class TestVoyagerClientFetchComments < Minitest::Test
     assert_equal [], comments
   end
 
-  def test_fetch_comments_pairs_with_updates_by_position
+  def test_fetch_comments_pairs_by_highlighted_comments_not_position
     response_body = {
       "included" => [
         {
+          "$type" => "com.linkedin.voyager.dash.feed.Update",
+          "entityUrn" => "urn:li:fsd_update:(urn:li:activity:200,PROFILE_COMMENTS,EMPTY,DEFAULT,false)",
+          "commentary" => { "text" => { "text" => "Second post" } },
+          "header" => { "text" => { "text" => "Me commented on this" } },
+          "*highlightedComments" => ["urn:li:fsd_comment:(222,urn:li:activity:200)"]
+        },
+        {
+          "$type" => "com.linkedin.voyager.dash.feed.Update",
+          "entityUrn" => "urn:li:fsd_update:(urn:li:activity:100,PROFILE_COMMENTS,EMPTY,DEFAULT,false)",
+          "commentary" => { "text" => { "text" => "First post" } },
+          "header" => { "text" => { "text" => "Me commented on this" } },
+          "*highlightedComments" => ["urn:li:fsd_comment:(111,urn:li:ugcPost:100)"]
+        },
+        {
           "$type" => "com.linkedin.voyager.dash.social.Comment",
-          "commentary" => { "text" => "My comment" },
+          "entityUrn" => "urn:li:fsd_comment:(111,urn:li:ugcPost:100)",
+          "commentary" => { "text" => "Comment on first post" },
           "permalink" => "https://linkedin.com/comment/1",
           "createdAt" => 1000,
           "commenter" => { "title" => { "text" => "Me" } }
         },
         {
-          "$type" => "com.linkedin.voyager.dash.feed.Update",
-          "commentary" => { "text" => { "text" => "The post I commented on" } },
-          "header" => { "text" => { "text" => "Me commented on this" } },
-          "entityUrn" => "urn:li:fsd_update:(urn:li:activity:42,MEMBER_SHARES,EMPTY,DEFAULT,false)"
+          "$type" => "com.linkedin.voyager.dash.social.Comment",
+          "entityUrn" => "urn:li:fsd_comment:(222,urn:li:activity:200)",
+          "commentary" => { "text" => "Comment on second post" },
+          "permalink" => "https://linkedin.com/comment/2",
+          "createdAt" => 2000,
+          "commenter" => { "title" => { "text" => "Me" } }
         }
       ]
     }.to_json
@@ -283,8 +305,10 @@ class TestVoyagerClientFetchComments < Minitest::Test
     stub_graphql_comments(PROFILE_URN, response_body)
 
     comments = @client.fetch_comments(PROFILE_URN)
-    assert_equal "The post I commented on", comments[0][:post_content]
-    assert_equal "https://www.linkedin.com/feed/update/urn:li:activity:42", comments[0][:post_url]
+    assert_equal 2, comments.length
+    # Comment on first post should be paired with "First post", not "Second post"
+    assert_equal "First post", comments[0][:post_content]
+    assert_equal "Second post", comments[1][:post_content]
   end
 
   private

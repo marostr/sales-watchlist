@@ -41,8 +41,17 @@ class VoyagerClient
     comments = included.select { |item| item["$type"] == COMMENT_TYPE }
     updates = included.select { |item| item["$type"] == UPDATE_TYPE }
 
-    comments.each_with_index.filter_map do |comment, i|
-      update = updates[i]
+    update_by_post = {}
+    updates.each do |update|
+      (update["*highlightedComments"] || []).each do |urn|
+        post_id = extract_post_id_from_comment_urn(urn)
+        update_by_post[post_id] = update if post_id
+      end
+    end
+
+    comments.filter_map do |comment|
+      post_id = extract_post_id_from_comment_urn(comment["entityUrn"])
+      update = update_by_post[post_id]
       parse_comment(comment, update)
     end
   end
@@ -75,6 +84,12 @@ class VoyagerClient
       header: header,
       commented_at: comment["createdAt"]
     }
+  end
+
+  def extract_post_id_from_comment_urn(urn)
+    return nil unless urn
+    match = urn.match(/urn:li:fsd_comment:\((\d+),(.*)\)/)
+    match&.[](2)
   end
 
   def post_url_from(update)
