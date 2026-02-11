@@ -58,6 +58,14 @@ class WatchlistStore
     @db.execute("SELECT * FROM watchlist_comments WHERE processed = 0 ORDER BY rowid")
   end
 
+  def posts_by_author(author_profile)
+    @db.execute("SELECT * FROM watchlist_posts WHERE author_profile = ? ORDER BY rowid", [author_profile])
+  end
+
+  def comments_by_author(author_profile)
+    @db.execute("SELECT * FROM watchlist_comments WHERE author_profile = ? ORDER BY rowid", [author_profile])
+  end
+
   def mark_processed_posts(urls)
     urls.each do |url|
       @db.execute("UPDATE watchlist_posts SET processed = 1 WHERE url = ?", [url])

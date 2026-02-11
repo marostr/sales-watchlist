@@ -134,6 +134,25 @@ class TestWatchlistFetcherFetchAll < Minitest::Test
     assert_equal "URN_ALICE", watchlist[0]["profile_urn"]
   end
 
+  def test_enriches_posts_with_author_info
+    @client.profiles["alice"] = "URN_ALICE"
+    @client.posts["URN_ALICE"] = [{ url: "https://linkedin.com/post/1", content: "A" }]
+    @client.comments["URN_ALICE"] = [
+      { url: "https://linkedin.com/comment/1", comment_text: "Nice",
+        post_url: "https://linkedin.com/post/99", post_content: "Original", commented_at: 1000 }
+    ]
+
+    @fetcher.fetch_all([{ "name" => "Alice Smith", "linkedin_id" => "alice" }])
+
+    post = @store.unprocessed_posts.first
+    assert_equal "Alice Smith", post["author_name"]
+    assert_equal "alice", post["author_profile"]
+
+    comment = @store.unprocessed_comments.first
+    assert_equal "Alice Smith", comment["author_name"]
+    assert_equal "alice", comment["author_profile"]
+  end
+
   def test_logs_fetch_to_store
     @client.profiles["alice"] = "URN_ALICE"
     @client.posts["URN_ALICE"] = [{ url: "https://linkedin.com/post/1", content: "A", author_name: "Alice", author_profile: "alice" }]

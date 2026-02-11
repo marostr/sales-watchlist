@@ -103,6 +103,49 @@ class TestCliBriefing < Minitest::Test
   end
 end
 
+class TestCliShow < Minitest::Test
+  def setup
+    @dir = Dir.mktmpdir
+    @db_path = File.join(@dir, "test.db")
+
+    store = WatchlistStore.new(@db_path)
+    store.store_posts([
+      { url: "https://linkedin.com/post/1", author_name: "Alice", author_profile: "alice", content: "Alice post" },
+      { url: "https://linkedin.com/post/2", author_name: "Bob", author_profile: "bob", content: "Bob post" }
+    ])
+    store.store_comments([
+      { url: "https://linkedin.com/comment/1", author_name: "Alice", author_profile: "alice",
+        comment_text: "Alice comment", post_url: "https://linkedin.com/post/99",
+        post_content: "Original", commented_at: "1000" }
+    ])
+  end
+
+  def teardown
+    FileUtils.remove_entry @dir
+  end
+
+  def test_show_outputs_person_posts_and_comments
+    out, _err = capture_io do
+      CLI.run(["show", "alice"], db_path: @db_path)
+    end
+
+    data = JSON.parse(out)
+    assert_equal 1, data["posts"].length
+    assert_equal "Alice post", data["posts"][0]["content"]
+    assert_equal 1, data["comments"].length
+    assert_equal "Alice comment", data["comments"][0]["comment_text"]
+  end
+
+  def test_show_excludes_other_authors
+    out, _err = capture_io do
+      CLI.run(["show", "alice"], db_path: @db_path)
+    end
+
+    data = JSON.parse(out)
+    data["posts"].each { |p| assert_equal "alice", p["author_profile"] }
+  end
+end
+
 class TestCliMarkProcessed < Minitest::Test
   def setup
     @dir = Dir.mktmpdir

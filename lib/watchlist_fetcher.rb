@@ -43,6 +43,9 @@ class WatchlistFetcher
       sleep(random_delay)
       comments = @client.fetch_comments(urn)
 
+      posts.each { |p| p[:author_name] = name; p[:author_profile] = linkedin_id }
+      comments.each { |c| c[:author_name] = name; c[:author_profile] = linkedin_id }
+
       posts_inserted = @store.store_posts(posts)
       comments_inserted = @store.store_comments(comments)
 

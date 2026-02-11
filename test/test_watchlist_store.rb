@@ -131,6 +131,44 @@ class TestWatchlistStoreCommentStorage < Minitest::Test
   end
 end
 
+class TestWatchlistStoreQueryByAuthor < Minitest::Test
+  def setup
+    @dir = Dir.mktmpdir
+    @store = WatchlistStore.new(File.join(@dir, "test.db"))
+    @store.store_posts([
+      { url: "https://linkedin.com/post/1", author_name: "Alice", author_profile: "alice", content: "Alice post" },
+      { url: "https://linkedin.com/post/2", author_name: "Bob", author_profile: "bob", content: "Bob post" }
+    ])
+    @store.store_comments([
+      { url: "https://linkedin.com/comment/1", author_name: "Alice", author_profile: "alice",
+        comment_text: "Alice comment", post_url: "https://linkedin.com/post/99", post_content: "Some post", commented_at: 1000 },
+      { url: "https://linkedin.com/comment/2", author_name: "Bob", author_profile: "bob",
+        comment_text: "Bob comment", post_url: "https://linkedin.com/post/88", post_content: "Other post", commented_at: 2000 }
+    ])
+  end
+
+  def teardown
+    FileUtils.remove_entry @dir
+  end
+
+  def test_posts_by_author
+    posts = @store.posts_by_author("alice")
+    assert_equal 1, posts.length
+    assert_equal "Alice post", posts[0]["content"]
+  end
+
+  def test_comments_by_author
+    comments = @store.comments_by_author("alice")
+    assert_equal 1, comments.length
+    assert_equal "Alice comment", comments[0]["comment_text"]
+  end
+
+  def test_returns_empty_for_unknown_author
+    assert_equal [], @store.posts_by_author("nobody")
+    assert_equal [], @store.comments_by_author("nobody")
+  end
+end
+
 class TestWatchlistStoreFetchLog < Minitest::Test
   def setup
     @dir = Dir.mktmpdir

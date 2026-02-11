@@ -19,6 +19,8 @@ class CLI
       run_briefing(args, db_path: db_path)
     when "mark-processed"
       run_mark_processed(args, db_path: db_path)
+    when "show"
+      run_show(args, db_path: db_path)
     else
       $stderr.puts "Usage: sales-watchlist <fetch|briefing|mark-processed>"
       exit 1
@@ -76,6 +78,20 @@ class CLI
     }
 
     puts JSON.pretty_generate(output)
+  end
+
+  def self.run_show(args, db_path:)
+    linkedin_id = args.shift
+    unless linkedin_id
+      $stderr.puts "Usage: sales-watchlist show <linkedin_id>"
+      exit 1
+    end
+
+    store = WatchlistStore.new(db_path)
+    posts = store.posts_by_author(linkedin_id)
+    comments = store.comments_by_author(linkedin_id)
+
+    puts JSON.pretty_generate(posts: posts, comments: comments)
   end
 
   def self.run_mark_processed(args, db_path:)
