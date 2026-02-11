@@ -153,6 +153,55 @@ class TestWatchlistFetcherFetchAll < Minitest::Test
     assert_equal "alice", comment["author_profile"]
   end
 
+  def test_paginates_when_all_posts_are_new
+    @client.profiles["alice"] = "URN_ALICE"
+    @client.posts["URN_ALICE"] = (1..40).map { |i| { url: "https://linkedin.com/post/#{i}", content: "Post #{i}" } }
+    @client.comments["URN_ALICE"] = []
+
+    stats = @fetcher.fetch_all([{ "name" => "Alice", "linkedin_id" => "alice" }])
+
+    assert_equal 40, stats[:posts_fetched]
+    assert_equal 40, stats[:posts_inserted]
+  end
+
+  def test_stops_pagination_when_duplicates_found
+    @client.profiles["alice"] = "URN_ALICE"
+    @client.posts["URN_ALICE"] = (1..40).map { |i| { url: "https://linkedin.com/post/#{i}", content: "Post #{i}" } }
+    @client.comments["URN_ALICE"] = []
+
+    # Pre-insert one post from page 1 — not all new, so stop
+    @store.store_posts([{ url: "https://linkedin.com/post/1", content: "Post 1" }])
+
+    stats = @fetcher.fetch_all([{ "name" => "Alice", "linkedin_id" => "alice" }])
+
+    assert_equal 20, stats[:posts_fetched]
+  end
+
+  def test_pagination_stops_at_max_four_pages
+    @client.profiles["alice"] = "URN_ALICE"
+    @client.posts["URN_ALICE"] = (1..100).map { |i| { url: "https://linkedin.com/post/#{i}", content: "Post #{i}" } }
+    @client.comments["URN_ALICE"] = []
+
+    stats = @fetcher.fetch_all([{ "name" => "Alice", "linkedin_id" => "alice" }])
+
+    assert_equal 80, stats[:posts_fetched]
+    assert_equal 80, stats[:posts_inserted]
+  end
+
+  def test_paginates_comments_same_as_posts
+    @client.profiles["alice"] = "URN_ALICE"
+    @client.posts["URN_ALICE"] = []
+    @client.comments["URN_ALICE"] = (1..40).map { |i|
+      { url: "https://linkedin.com/comment/#{i}", comment_text: "Comment #{i}",
+        post_url: "https://linkedin.com/post/#{i}", post_content: "Post #{i}", commented_at: i }
+    }
+
+    stats = @fetcher.fetch_all([{ "name" => "Alice", "linkedin_id" => "alice" }])
+
+    assert_equal 40, stats[:comments_fetched]
+    assert_equal 40, stats[:comments_inserted]
+  end
+
   def test_logs_fetch_to_store
     @client.profiles["alice"] = "URN_ALICE"
     @client.posts["URN_ALICE"] = [{ url: "https://linkedin.com/post/1", content: "A", author_name: "Alice", author_profile: "alice" }]
@@ -184,10 +233,10 @@ class MockVoyagerClient
   end
 
   def fetch_posts(urn, count: 20, start: 0)
-    @posts.fetch(urn, [])
+    @posts.fetch(urn, []).slice(start, count) || []
   end
 
   def fetch_comments(urn, count: 20, start: 0)
-    @comments.fetch(urn, [])
+    @comments.fetch(urn, []).slice(start, count) || []
   end
 end
