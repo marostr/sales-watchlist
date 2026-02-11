@@ -117,6 +117,31 @@ class TestVoyagerClientFetchPosts < Minitest::Test
     assert_equal 0, posts.length
   end
 
+  def test_fetch_posts_skips_engagement_activity_with_header
+    response_body = {
+      "included" => [
+        {
+          "$type" => "com.linkedin.voyager.dash.feed.Update",
+          "entityUrn" => "urn:li:fsd_update:(urn:li:activity:123,MEMBER_SHARES,EMPTY,DEFAULT,false)",
+          "commentary" => { "text" => { "text" => "Someone else's post content" } },
+          "header" => { "text" => { "text" => "Blazej commented on this" } }
+        },
+        {
+          "$type" => "com.linkedin.voyager.dash.feed.Update",
+          "entityUrn" => "urn:li:fsd_update:(urn:li:activity:456,MEMBER_SHARES,EMPTY,DEFAULT,false)",
+          "commentary" => { "text" => { "text" => "My original post" } },
+          "header" => nil
+        }
+      ]
+    }.to_json
+
+    stub_graphql_posts(PROFILE_URN, response_body)
+
+    posts = @client.fetch_posts(PROFILE_URN)
+    assert_equal 1, posts.length
+    assert_equal "My original post", posts[0][:content]
+  end
+
   def test_fetch_posts_with_pagination
     response_body = { "included" => [] }.to_json
 

@@ -52,6 +52,7 @@ class VoyagerClient
   def parse_post(update)
     content = update.dig("commentary", "text", "text")
     return nil unless content
+    return nil if update["header"]
 
     url = post_url_from(update)
 
