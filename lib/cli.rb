@@ -60,24 +60,13 @@ class CLI
   end
 
   def self.run_briefing(args, db_path:)
-    context_path = nil
-
-    OptionParser.new do |opts|
-      opts.on("--context PATH") { |v| context_path = v }
-    end.parse!(args)
+    OptionParser.new.parse!(args)
 
     store = WatchlistStore.new(db_path)
-    posts = store.unprocessed_posts
-    comments = store.unprocessed_comments
-
-    sales_context = if context_path && File.exist?(context_path)
-      File.read(context_path)
-    end
 
     output = {
-      posts: posts,
-      comments: comments,
-      sales_context: sales_context
+      posts: store.unprocessed_posts,
+      comments: store.unprocessed_comments
     }
 
     puts JSON.pretty_generate(output)

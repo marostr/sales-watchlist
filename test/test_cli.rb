@@ -84,8 +84,6 @@ class TestCliBriefing < Minitest::Test
   def setup
     @dir = Dir.mktmpdir
     @db_path = File.join(@dir, "test.db")
-    @context_path = File.join(@dir, "sales_context.md")
-    File.write(@context_path, "I sell widgets to enterprises")
 
     store = WatchlistStore.new(@db_path)
     store.store_posts([
@@ -103,27 +101,16 @@ class TestCliBriefing < Minitest::Test
     FileUtils.remove_entry @dir
   end
 
-  def test_briefing_outputs_json_with_posts_comments_and_context
-    out, _err = capture_io do
-      CLI.run(["briefing", "--context", @context_path], db_path: @db_path)
-    end
-
-    data = JSON.parse(out)
-    assert_equal 1, data["posts"].length
-    assert_equal 1, data["comments"].length
-    assert_equal "I sell widgets to enterprises", data["sales_context"]
-    assert_equal "Hello world", data["posts"][0]["content"]
-    assert_equal "Great post!", data["comments"][0]["comment_text"]
-  end
-
-  def test_briefing_without_context_file
+  def test_briefing_outputs_json_with_posts_and_comments
     out, _err = capture_io do
       CLI.run(["briefing"], db_path: @db_path)
     end
 
     data = JSON.parse(out)
-    assert_nil data["sales_context"]
     assert_equal 1, data["posts"].length
+    assert_equal 1, data["comments"].length
+    assert_equal "Hello world", data["posts"][0]["content"]
+    assert_equal "Great post!", data["comments"][0]["comment_text"]
   end
 end
 
