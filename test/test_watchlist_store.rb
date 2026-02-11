@@ -172,30 +172,37 @@ end
 class TestWatchlistStoreTimeSince < Minitest::Test
   def setup
     @dir = Dir.mktmpdir
-    @store = WatchlistStore.new(File.join(@dir, "test.db"))
+    @db_path = File.join(@dir, "test.db")
+    @store = WatchlistStore.new(@db_path)
 
     @store.store_posts([
       { url: "https://linkedin.com/post/old", author_name: "Alice", author_profile: "alice",
-        content: "Old post", posted_at: "2026-02-08T10:00:00Z" },
+        content: "Old post", posted_at: nil },
       { url: "https://linkedin.com/post/recent", author_name: "Bob", author_profile: "bob",
-        content: "Recent post", posted_at: "2026-02-10T10:00:00Z" }
+        content: "Recent post", posted_at: nil }
     ])
 
     @store.store_comments([
       { url: "https://linkedin.com/comment/old", author_name: "Alice", author_profile: "alice",
         comment_text: "Old comment", post_url: "https://linkedin.com/post/99",
-        post_content: "Original", post_author_name: "Eve", commented_at: "2026-02-08T10:00:00Z" },
+        post_content: "Original", post_author_name: "Eve", commented_at: "1707400000000" },
       { url: "https://linkedin.com/comment/recent", author_name: "Bob", author_profile: "bob",
         comment_text: "Recent comment", post_url: "https://linkedin.com/post/88",
-        post_content: "Other", post_author_name: "Eve", commented_at: "2026-02-10T10:00:00Z" }
+        post_content: "Other", post_author_name: "Eve", commented_at: "1707400000000" }
     ])
+
+    # Backdate "old" items to 3 days ago
+    db = SQLite3::Database.new(@db_path)
+    old_time = "2026-02-08T10:00:00Z"
+    db.execute("UPDATE watchlist_posts SET fetched_at = ? WHERE url = ?", [old_time, "https://linkedin.com/post/old"])
+    db.execute("UPDATE watchlist_comments SET fetched_at = ? WHERE url = ?", [old_time, "https://linkedin.com/comment/old"])
   end
 
   def teardown
     FileUtils.remove_entry @dir
   end
 
-  def test_posts_since_returns_posts_after_cutoff
+  def test_posts_since_filters_by_fetched_at
     cutoff = "2026-02-09T00:00:00Z"
     posts = @store.posts_since(cutoff)
     assert_equal 1, posts.length
@@ -216,7 +223,7 @@ class TestWatchlistStoreTimeSince < Minitest::Test
     assert_equal "Recent post", posts[0]["content"]
   end
 
-  def test_comments_since_returns_comments_after_cutoff
+  def test_comments_since_filters_by_fetched_at
     cutoff = "2026-02-09T00:00:00Z"
     comments = @store.comments_since(cutoff)
     assert_equal 1, comments.length
@@ -232,12 +239,12 @@ class TestWatchlistStoreTimeSince < Minitest::Test
   end
 
   def test_posts_since_returns_empty_when_nothing_matches
-    cutoff = "2026-02-11T00:00:00Z"
+    cutoff = "2099-01-01T00:00:00Z"
     assert_equal [], @store.posts_since(cutoff)
   end
 
   def test_comments_since_returns_empty_when_nothing_matches
-    cutoff = "2026-02-11T00:00:00Z"
+    cutoff = "2099-01-01T00:00:00Z"
     assert_equal [], @store.comments_since(cutoff)
   end
 end

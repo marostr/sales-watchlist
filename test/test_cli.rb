@@ -121,30 +121,34 @@ class TestCliBriefingLast < Minitest::Test
 
     store = WatchlistStore.new(@db_path)
 
-    # Old post/comment (3 days ago) — already processed
+    # Old post/comment — already processed
     store.store_posts([
       { url: "https://linkedin.com/post/old", author_name: "Alice", author_profile: "alice",
-        content: "Old post", posted_at: (Time.now.utc - 3 * 86400).iso8601 }
+        content: "Old post", posted_at: nil }
     ])
     store.store_comments([
       { url: "https://linkedin.com/comment/old", author_name: "Alice", author_profile: "alice",
         comment_text: "Old comment", post_url: "https://linkedin.com/post/99",
-        post_content: "Original", post_author_name: "Bob",
-        commented_at: (Time.now.utc - 3 * 86400).iso8601 }
+        post_content: "Original", post_author_name: "Bob", commented_at: nil }
     ])
     store.mark_processed_posts(["https://linkedin.com/post/old"])
     store.mark_processed_comments(["https://linkedin.com/comment/old"])
 
-    # Recent post/comment (6 hours ago) — unprocessed
+    # Backdate old items to 3 days ago
+    db = SQLite3::Database.new(@db_path)
+    old_time = (Time.now.utc - 3 * 86400).iso8601
+    db.execute("UPDATE watchlist_posts SET fetched_at = ? WHERE url = ?", [old_time, "https://linkedin.com/post/old"])
+    db.execute("UPDATE watchlist_comments SET fetched_at = ? WHERE url = ?", [old_time, "https://linkedin.com/comment/old"])
+
+    # Recent post/comment (fetched now) — unprocessed
     store.store_posts([
       { url: "https://linkedin.com/post/recent", author_name: "Bob", author_profile: "bob",
-        content: "Recent post", posted_at: (Time.now.utc - 6 * 3600).iso8601 }
+        content: "Recent post", posted_at: nil }
     ])
     store.store_comments([
       { url: "https://linkedin.com/comment/recent", author_name: "Bob", author_profile: "bob",
         comment_text: "Recent comment", post_url: "https://linkedin.com/post/88",
-        post_content: "Other", post_author_name: "Eve",
-        commented_at: (Time.now.utc - 6 * 3600).iso8601 }
+        post_content: "Other", post_author_name: "Eve", commented_at: nil }
     ])
   end
 
