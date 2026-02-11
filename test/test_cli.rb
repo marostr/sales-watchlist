@@ -114,6 +114,91 @@ class TestCliBriefing < Minitest::Test
   end
 end
 
+class TestCliBriefingLast < Minitest::Test
+  def setup
+    @dir = Dir.mktmpdir
+    @db_path = File.join(@dir, "test.db")
+
+    store = WatchlistStore.new(@db_path)
+
+    # Old post/comment (3 days ago) — already processed
+    store.store_posts([
+      { url: "https://linkedin.com/post/old", author_name: "Alice", author_profile: "alice",
+        content: "Old post", posted_at: (Time.now.utc - 3 * 86400).iso8601 }
+    ])
+    store.store_comments([
+      { url: "https://linkedin.com/comment/old", author_name: "Alice", author_profile: "alice",
+        comment_text: "Old comment", post_url: "https://linkedin.com/post/99",
+        post_content: "Original", post_author_name: "Bob",
+        commented_at: (Time.now.utc - 3 * 86400).iso8601 }
+    ])
+    store.mark_processed_posts(["https://linkedin.com/post/old"])
+    store.mark_processed_comments(["https://linkedin.com/comment/old"])
+
+    # Recent post/comment (6 hours ago) — unprocessed
+    store.store_posts([
+      { url: "https://linkedin.com/post/recent", author_name: "Bob", author_profile: "bob",
+        content: "Recent post", posted_at: (Time.now.utc - 6 * 3600).iso8601 }
+    ])
+    store.store_comments([
+      { url: "https://linkedin.com/comment/recent", author_name: "Bob", author_profile: "bob",
+        comment_text: "Recent comment", post_url: "https://linkedin.com/post/88",
+        post_content: "Other", post_author_name: "Eve",
+        commented_at: (Time.now.utc - 6 * 3600).iso8601 }
+    ])
+  end
+
+  def teardown
+    FileUtils.remove_entry @dir
+  end
+
+  def test_briefing_last_24h_includes_recent_items
+    out, _err = capture_io do
+      CLI.run(["briefing", "--last", "24h"], db_path: @db_path)
+    end
+
+    data = JSON.parse(out)
+    assert_equal 1, data["posts"].length
+    assert_equal "Recent post", data["posts"][0]["content"]
+    assert_equal 1, data["comments"].length
+    assert_equal "Recent comment", data["comments"][0]["comment_text"]
+  end
+
+  def test_briefing_last_48h_includes_recent_but_not_old
+    out, _err = capture_io do
+      CLI.run(["briefing", "--last", "48h"], db_path: @db_path)
+    end
+
+    data = JSON.parse(out)
+    assert_equal 1, data["posts"].length
+    assert_equal "Recent post", data["posts"][0]["content"]
+  end
+
+  def test_briefing_last_includes_processed_items
+    store = WatchlistStore.new(@db_path)
+    store.mark_processed_posts(["https://linkedin.com/post/recent"])
+
+    out, _err = capture_io do
+      CLI.run(["briefing", "--last", "24h"], db_path: @db_path)
+    end
+
+    data = JSON.parse(out)
+    assert_equal 1, data["posts"].length
+    assert_equal "Recent post", data["posts"][0]["content"]
+  end
+
+  def test_briefing_without_last_still_uses_unprocessed
+    out, _err = capture_io do
+      CLI.run(["briefing"], db_path: @db_path)
+    end
+
+    data = JSON.parse(out)
+    # Only unprocessed items (the recent ones)
+    assert_equal 1, data["posts"].length
+    assert_equal "Recent post", data["posts"][0]["content"]
+  end
+end
+
 class TestCliShow < Minitest::Test
   def setup
     @dir = Dir.mktmpdir

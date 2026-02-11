@@ -58,6 +58,14 @@ class WatchlistStore
     @db.execute("SELECT * FROM watchlist_comments WHERE processed = 0 ORDER BY rowid")
   end
 
+  def posts_since(cutoff)
+    @db.execute("SELECT * FROM watchlist_posts WHERE posted_at >= ? ORDER BY rowid", [cutoff])
+  end
+
+  def comments_since(cutoff)
+    @db.execute("SELECT * FROM watchlist_comments WHERE commented_at >= ? ORDER BY rowid", [cutoff])
+  end
+
   def posts_by_author(author_profile)
     @db.execute("SELECT * FROM watchlist_posts WHERE author_profile = ? ORDER BY rowid", [author_profile])
   end

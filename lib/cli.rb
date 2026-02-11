@@ -60,16 +60,38 @@ class CLI
   end
 
   def self.run_briefing(args, db_path:)
-    OptionParser.new.parse!(args)
+    last = nil
+
+    OptionParser.new do |opts|
+      opts.on("--last PERIOD") { |v| last = v }
+    end.parse!(args)
 
     store = WatchlistStore.new(db_path)
 
-    output = {
-      posts: store.unprocessed_posts,
-      comments: store.unprocessed_comments
-    }
+    if last
+      hours = parse_duration(last)
+      cutoff = (Time.now.utc - hours * 3600).iso8601
+      output = {
+        posts: store.posts_since(cutoff),
+        comments: store.comments_since(cutoff)
+      }
+    else
+      output = {
+        posts: store.unprocessed_posts,
+        comments: store.unprocessed_comments
+      }
+    end
 
     puts JSON.pretty_generate(output)
+  end
+
+  def self.parse_duration(period)
+    match = period.match(/\A(\d+)h\z/)
+    unless match
+      $stderr.puts "Invalid duration: #{period}. Use format like 24h or 48h."
+      exit 1
+    end
+    match[1].to_i
   end
 
   def self.run_show(args, db_path:)

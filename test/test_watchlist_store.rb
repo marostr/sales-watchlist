@@ -169,6 +169,79 @@ class TestWatchlistStoreQueryByAuthor < Minitest::Test
   end
 end
 
+class TestWatchlistStoreTimeSince < Minitest::Test
+  def setup
+    @dir = Dir.mktmpdir
+    @store = WatchlistStore.new(File.join(@dir, "test.db"))
+
+    @store.store_posts([
+      { url: "https://linkedin.com/post/old", author_name: "Alice", author_profile: "alice",
+        content: "Old post", posted_at: "2026-02-08T10:00:00Z" },
+      { url: "https://linkedin.com/post/recent", author_name: "Bob", author_profile: "bob",
+        content: "Recent post", posted_at: "2026-02-10T10:00:00Z" }
+    ])
+
+    @store.store_comments([
+      { url: "https://linkedin.com/comment/old", author_name: "Alice", author_profile: "alice",
+        comment_text: "Old comment", post_url: "https://linkedin.com/post/99",
+        post_content: "Original", post_author_name: "Eve", commented_at: "2026-02-08T10:00:00Z" },
+      { url: "https://linkedin.com/comment/recent", author_name: "Bob", author_profile: "bob",
+        comment_text: "Recent comment", post_url: "https://linkedin.com/post/88",
+        post_content: "Other", post_author_name: "Eve", commented_at: "2026-02-10T10:00:00Z" }
+    ])
+  end
+
+  def teardown
+    FileUtils.remove_entry @dir
+  end
+
+  def test_posts_since_returns_posts_after_cutoff
+    cutoff = "2026-02-09T00:00:00Z"
+    posts = @store.posts_since(cutoff)
+    assert_equal 1, posts.length
+    assert_equal "Recent post", posts[0]["content"]
+  end
+
+  def test_posts_since_returns_all_when_cutoff_is_old
+    cutoff = "2026-02-01T00:00:00Z"
+    posts = @store.posts_since(cutoff)
+    assert_equal 2, posts.length
+  end
+
+  def test_posts_since_includes_processed_items
+    @store.mark_processed_posts(["https://linkedin.com/post/recent"])
+    cutoff = "2026-02-09T00:00:00Z"
+    posts = @store.posts_since(cutoff)
+    assert_equal 1, posts.length
+    assert_equal "Recent post", posts[0]["content"]
+  end
+
+  def test_comments_since_returns_comments_after_cutoff
+    cutoff = "2026-02-09T00:00:00Z"
+    comments = @store.comments_since(cutoff)
+    assert_equal 1, comments.length
+    assert_equal "Recent comment", comments[0]["comment_text"]
+  end
+
+  def test_comments_since_includes_processed_items
+    @store.mark_processed_comments(["https://linkedin.com/comment/recent"])
+    cutoff = "2026-02-09T00:00:00Z"
+    comments = @store.comments_since(cutoff)
+    assert_equal 1, comments.length
+    assert_equal "Recent comment", comments[0]["comment_text"]
+  end
+
+  def test_posts_since_returns_empty_when_nothing_matches
+    cutoff = "2026-02-11T00:00:00Z"
+    assert_equal [], @store.posts_since(cutoff)
+  end
+
+  def test_comments_since_returns_empty_when_nothing_matches
+    cutoff = "2026-02-11T00:00:00Z"
+    assert_equal [], @store.comments_since(cutoff)
+  end
+end
+
 class TestWatchlistStoreFetchLog < Minitest::Test
   def setup
     @dir = Dir.mktmpdir
