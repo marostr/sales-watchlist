@@ -99,6 +99,7 @@ class VoyagerClient
     request = Net::HTTP::Get.new(uri)
     request["Csrf-Token"] = @jsessionid
     request["Accept"] = "application/vnd.linkedin.normalized+json+2.1"
+    request["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
     request["Cookie"] = "JSESSIONID=\"#{@jsessionid}\"; li_at=#{@li_at}"
 
     response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
