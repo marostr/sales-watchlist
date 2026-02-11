@@ -1,0 +1,156 @@
+require "test_helper"
+require "watchlist_store"
+require "tmpdir"
+
+class TestWatchlistStoreInit < Minitest::Test
+  def test_creates_tables
+    Dir.mktmpdir do |dir|
+      db_path = File.join(dir, "test.db")
+      WatchlistStore.new(db_path)
+
+      db = SQLite3::Database.new(db_path)
+      tables = db.execute("SELECT name FROM sqlite_master WHERE type='table'").flatten
+      assert_includes tables, "watchlist_posts"
+      assert_includes tables, "watchlist_comments"
+      assert_includes tables, "fetches"
+    end
+  end
+end
+
+class TestWatchlistStorePostStorage < Minitest::Test
+  def setup
+    @dir = Dir.mktmpdir
+    @store = WatchlistStore.new(File.join(@dir, "test.db"))
+  end
+
+  def teardown
+    FileUtils.remove_entry @dir
+  end
+
+  def test_store_posts_inserts_new_posts
+    posts = [
+      { url: "https://linkedin.com/post/1", author_name: "Alice", author_profile: "alice",
+        content: "Hello world", posted_at: "2026-02-10T10:00:00Z" },
+      { url: "https://linkedin.com/post/2", author_name: "Bob", author_profile: "bob",
+        content: "Another post", posted_at: "2026-02-10T11:00:00Z" }
+    ]
+
+    count = @store.store_posts(posts)
+    assert_equal 2, count
+  end
+
+  def test_store_posts_deduplicates_by_url
+    post = { url: "https://linkedin.com/post/1", author_name: "Alice", author_profile: "alice",
+             content: "Hello", posted_at: nil }
+
+    @store.store_posts([post])
+    count = @store.store_posts([post])
+    assert_equal 0, count
+  end
+
+  def test_store_posts_skips_posts_without_url
+    posts = [
+      { url: nil, author_name: "Alice", content: "No URL" },
+      { url: "https://linkedin.com/post/1", author_name: "Bob", content: "Has URL" }
+    ]
+
+    count = @store.store_posts(posts)
+    assert_equal 1, count
+  end
+
+  def test_unprocessed_posts_returns_only_unprocessed
+    @store.store_posts([
+      { url: "https://linkedin.com/post/1", author_name: "Alice", author_profile: "alice", content: "Post 1" },
+      { url: "https://linkedin.com/post/2", author_name: "Bob", author_profile: "bob", content: "Post 2" }
+    ])
+
+    @store.mark_processed_posts(["https://linkedin.com/post/1"])
+
+    posts = @store.unprocessed_posts
+    assert_equal 1, posts.length
+    assert_equal "https://linkedin.com/post/2", posts[0]["url"]
+  end
+
+  def test_mark_processed_posts
+    @store.store_posts([
+      { url: "https://linkedin.com/post/1", author_name: "Alice", content: "Post 1" }
+    ])
+
+    @store.mark_processed_posts(["https://linkedin.com/post/1"])
+
+    posts = @store.unprocessed_posts
+    assert_equal 0, posts.length
+  end
+end
+
+class TestWatchlistStoreCommentStorage < Minitest::Test
+  def setup
+    @dir = Dir.mktmpdir
+    @store = WatchlistStore.new(File.join(@dir, "test.db"))
+  end
+
+  def teardown
+    FileUtils.remove_entry @dir
+  end
+
+  def test_store_comments_inserts_new_comments
+    comments = [
+      { url: "https://linkedin.com/comment/1", author_name: "Alice", author_profile: "alice",
+        comment_text: "Nice!", post_url: "https://linkedin.com/post/1",
+        post_content: "Original post", post_author_name: "Bob",
+        commented_at: "2026-02-10T10:00:00Z" }
+    ]
+
+    count = @store.store_comments(comments)
+    assert_equal 1, count
+  end
+
+  def test_store_comments_deduplicates_by_url
+    comment = { url: "https://linkedin.com/comment/1", author_name: "Alice",
+                comment_text: "Nice!", post_url: nil, post_content: nil,
+                post_author_name: nil, commented_at: nil }
+
+    @store.store_comments([comment])
+    count = @store.store_comments([comment])
+    assert_equal 0, count
+  end
+
+  def test_unprocessed_comments_returns_only_unprocessed
+    @store.store_comments([
+      { url: "https://linkedin.com/comment/1", author_name: "Alice",
+        comment_text: "Comment 1", commented_at: nil },
+      { url: "https://linkedin.com/comment/2", author_name: "Bob",
+        comment_text: "Comment 2", commented_at: nil }
+    ])
+
+    @store.mark_processed_comments(["https://linkedin.com/comment/1"])
+
+    comments = @store.unprocessed_comments
+    assert_equal 1, comments.length
+    assert_equal "https://linkedin.com/comment/2", comments[0]["url"]
+  end
+end
+
+class TestWatchlistStoreFetchLog < Minitest::Test
+  def setup
+    @dir = Dir.mktmpdir
+    @store = WatchlistStore.new(File.join(@dir, "test.db"))
+  end
+
+  def teardown
+    FileUtils.remove_entry @dir
+  end
+
+  def test_log_fetch_records_stats
+    @store.log_fetch(posts_fetched: 10, comments_fetched: 5, posts_inserted: 8, comments_inserted: 3)
+
+    db = SQLite3::Database.new(File.join(@dir, "test.db"))
+    db.results_as_hash = true
+    rows = db.execute("SELECT * FROM fetches")
+    assert_equal 1, rows.length
+    assert_equal 10, rows[0]["posts_fetched"]
+    assert_equal 5, rows[0]["comments_fetched"]
+    assert_equal 8, rows[0]["posts_inserted"]
+    assert_equal 3, rows[0]["comments_inserted"]
+  end
+end
