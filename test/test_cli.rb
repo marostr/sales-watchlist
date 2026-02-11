@@ -45,6 +45,30 @@ class TestCliFetch < Minitest::Test
     assert_match(/1/, out)
   end
 
+  def test_fetch_reads_cookies_from_file
+    cookie_path = File.join(@dir, "cookies.txt")
+    File.write(cookie_path, "JSESSIONID=\"ajax:123\"\nli_at=token")
+
+    out, _err = capture_io do
+      CLI.run(["fetch", "--watchlist", @watchlist_path, "--cookies", cookie_path],
+        db_path: @db_path)
+    end
+
+    assert_match(/Posts fetched/, out)
+  end
+
+  def test_fetch_reads_export_format_cookies
+    cookie_path = File.join(@dir, "cookies.env")
+    File.write(cookie_path, "export LINKEDIN_JSESSIONID=\"ajax:123\"\nexport LINKEDIN_LI_AT=\"token\"")
+
+    out, _err = capture_io do
+      CLI.run(["fetch", "--watchlist", @watchlist_path, "--cookies", cookie_path],
+        db_path: @db_path)
+    end
+
+    assert_match(/Posts fetched/, out)
+  end
+
   def test_fetch_saves_resolved_urns_to_watchlist
     capture_io do
       CLI.run(["fetch", "--watchlist", @watchlist_path],

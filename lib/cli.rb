@@ -27,18 +27,21 @@ class CLI
     end
   end
 
+  DEFAULT_COOKIES = File.expand_path("~/.linkedin-feed/cookies.env")
+
   def self.run_fetch(args, jsessionid:, li_at:, db_path:)
     watchlist_path = DEFAULT_WATCHLIST
+    cookies_path = nil
 
     OptionParser.new do |opts|
       opts.on("--watchlist PATH") { |v| watchlist_path = v }
+      opts.on("--cookies PATH") { |v| cookies_path = v }
     end.parse!(args)
 
-    jsessionid ||= ENV["LINKEDIN_JSESSIONID"]
-    li_at ||= ENV["LINKEDIN_LI_AT"]
+    jsessionid, li_at = load_cookies(jsessionid, li_at, cookies_path)
 
     unless jsessionid && li_at
-      $stderr.puts "Set LINKEDIN_JSESSIONID and LINKEDIN_LI_AT environment variables."
+      $stderr.puts "Provide cookies via --cookies PATH, cookies.txt, or LINKEDIN_JSESSIONID/LINKEDIN_LI_AT env vars."
       exit 1
     end
 
@@ -92,6 +95,32 @@ class CLI
     comments = store.comments_by_author(linkedin_id)
 
     puts JSON.pretty_generate(posts: posts, comments: comments)
+  end
+
+  def self.load_cookies(jsessionid, li_at, cookies_path)
+    return [jsessionid, li_at] if jsessionid && li_at
+
+    path = cookies_path || (File.exist?(DEFAULT_COOKIES) ? DEFAULT_COOKIES : nil)
+    if path && File.exist?(path)
+      File.readlines(path).each do |line|
+        line = line.strip.sub(/\Aexport\s+/, "")
+        key, value = line.split("=", 2)
+        next unless value
+
+        value = value.strip.gsub(/\A["']|["']\z/, "")
+        case key
+        when "LINKEDIN_JSESSIONID", "JSESSIONID"
+          jsessionid = value
+        when "LINKEDIN_LI_AT", "li_at"
+          li_at = value
+        end
+      end
+    end
+
+    jsessionid ||= ENV["LINKEDIN_JSESSIONID"]
+    li_at ||= ENV["LINKEDIN_LI_AT"]
+
+    [jsessionid, li_at]
   end
 
   def self.run_mark_processed(args, db_path:)
