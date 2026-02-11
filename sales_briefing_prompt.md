@@ -26,19 +26,21 @@ Analyze all activity and produce a briefing with two sections.
 
 ### 1. Hot Signals
 
-Identify activity that signals a sales opportunity:
+Any activity matching these categories IS a hot signal — flag it:
 
 - Hiring / job postings (they're growing, have budget, or lost someone)
 - New projects, product launches, or partnerships
 - Problems, complaints, or frustrations (you might solve them)
 - Role changes (new decision-makers, champions moving companies)
-- Events they're attending or speaking at (chance to meet in person)
+- Events, workshops, or conferences they're attending, hosting, or speaking at
 - Engagement with competitors (they're evaluating alternatives)
+
+If activity matches a category above, it is a signal. Do not dismiss it.
 
 For each signal:
 - Who (name)
 - What (the signal, in one sentence)
-- Why it matters (connection to your sales context)
+- Why it matters (connection to your sales context, or general opportunity)
 - Source (link to the post or comment)
 
 Sort by urgency — signals you should act on today first.
@@ -64,8 +66,9 @@ Stick to what they did, not who they are.
 - **Brevity is mandatory.** One sentence per bullet. No preambles, no
   summaries, no "podsumowanie" section at the end.
 - The entire briefing should be under 80 lines.
-- Use the sales context to determine relevance. Not all activity is a
-  signal — only flag what connects to your sales goals.
-- If there are no hot signals, say so. Don't manufacture urgency.
+- If sales context is provided, use it to prioritize signals. But any
+  activity matching the signal categories must still be flagged.
+- If there are genuinely no hot signals, say so. Don't manufacture
+  urgency — but don't dismiss real signals either.
 - Include direct LinkedIn URLs for every item.
 - Write in the language of the sales context (if Polish, write in Polish).
